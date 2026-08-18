@@ -5,7 +5,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 5m0s
-  path: ./fluxcd_manifests/apps/int
+  path: ./apps/int
   prune: true
   sourceRef:
     kind: GitRepository
