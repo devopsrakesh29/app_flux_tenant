@@ -13,21 +13,5 @@ spec:
         kind: HelmRepository
         name: acr-helm-repo
         namespace: flux-system
-  values:
-    environment: prod
-    replicaCount: 1
-    image:
-      repository: postgres
-      tag: "16-alpine"
-    ingress:
-      enabled: false
-      className: kong
-      hosts:
-        - host: db.axion.local
-          paths:
-            - path: /
-              pathType: Prefix
-    env:
-      POSTGRES_DB: "axion_db"
-      POSTGRES_USER: "axion_user"
-      POSTGRES_PASSWORD: "Axiondb@1234"
+      valuesFiles:
+        - values-prod.yaml

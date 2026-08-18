@@ -13,19 +13,5 @@ spec:
         kind: HelmRepository
         name: acr-helm-repo
         namespace: flux-system
-  values:
-    environment: int
-    replicaCount: 1
-    image:
-      repository: rakeshacr01.azurecr.io/int-axion-ui
-      tag: "latest"
-    ingress:
-      enabled: true
-      className: kong
-      hosts:
-        - host: int-dashboard.axion.local
-          paths:
-            - path: /
-              pathType: Prefix
-    env:
-      VITE_API_URL: ""
+      valuesFiles:
+        - values-int.yaml

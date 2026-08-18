@@ -13,19 +13,5 @@ spec:
         kind: HelmRepository
         name: acr-helm-repo
         namespace: flux-system
-  values:
-    environment: dev
-    replicaCount: 1
-    image:
-      repository: rakeshacr01.azurecr.io/dev-axion-ui
-      tag: "latest"
-    ingress:
-      enabled: true
-      className: kong
-      hosts:
-        - host: dev-dashboard.axion.local
-          paths:
-            - path: /
-              pathType: Prefix
-    env:
-      VITE_API_URL: ""
+      valuesFiles:
+        - values-dev.yaml

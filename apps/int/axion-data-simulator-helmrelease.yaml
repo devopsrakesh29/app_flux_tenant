@@ -13,20 +13,5 @@ spec:
         kind: HelmRepository
         name: acr-helm-repo
         namespace: flux-system
-  values:
-    environment: int
-    replicaCount: 1
-    image:
-      repository: rakeshacr01.azurecr.io/int-axion-data-simulator
-      tag: "latest"
-    ingress:
-      enabled: false
-      className: kong
-      hosts:
-        - host: int-simulator.axion.local
-          paths:
-            - path: /
-              pathType: Prefix
-    env:
-      API_URL: "http://axion-ingestion-service.int.svc.cluster.local:8000/api/v1/telemetry/ingest"
-      INTERVAL_SECONDS: "5"
+      valuesFiles:
+        - values-int.yaml

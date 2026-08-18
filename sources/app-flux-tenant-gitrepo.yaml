@@ -1,7 +1,7 @@
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
 metadata:
-  name: app-flux-tenant
+  name: app_flux_tenant
   namespace: flux-system
 spec:
   interval: 1m0s
