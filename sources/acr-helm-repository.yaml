@@ -1,0 +1,12 @@
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmRepository
+metadata:
+  name: acr-helm-repo
+  namespace: flux-system
+spec:
+  type: oci
+  interval: 1m0s
+  url: oci://rakeshacr01.azurecr.io/helm
+  provider: azure
+  secretRef:
+    name: acr-credentials

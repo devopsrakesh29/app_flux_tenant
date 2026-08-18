@@ -1,0 +1,31 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta2
+kind: HelmRelease
+metadata:
+  name: axion-ingestion-service
+  namespace: dev
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: axion-ingestion-service
+      version: ">=0.1.0"
+      sourceRef:
+        kind: HelmRepository
+        name: acr-helm-repo
+        namespace: flux-system
+  values:
+    environment: dev
+    replicaCount: 1
+    image:
+      repository: rakeshacr01.azurecr.io/dev-axion-ingestion-service
+      tag: "dev-latest"
+    ingress:
+      enabled: false
+      className: kong
+      hosts:
+        - host: dev-ingestion.axion.local
+          paths:
+            - path: /
+              pathType: Prefix
+    env:
+      DATABASE_URL: "postgresql://axion_user:Axiondb%401234@axion-db-service.dev.svc.cluster.local:5432/axion_db"

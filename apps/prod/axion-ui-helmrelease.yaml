@@ -1,0 +1,31 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta2
+kind: HelmRelease
+metadata:
+  name: axion-ui
+  namespace: prod
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: axion-ui
+      version: ">=0.1.0"
+      sourceRef:
+        kind: HelmRepository
+        name: acr-helm-repo
+        namespace: flux-system
+  values:
+    environment: prod
+    replicaCount: 1
+    image:
+      repository: rakeshacr01.azurecr.io/prod-axion-ui
+      tag: "prod-latest"
+    ingress:
+      enabled: true
+      className: kong
+      hosts:
+        - host: dashboard.axion.local
+          paths:
+            - path: /
+              pathType: Prefix
+    env:
+      VITE_API_URL: ""

@@ -1,0 +1,31 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta2
+kind: HelmRelease
+metadata:
+  name: axion-telemetry-query-service
+  namespace: prod
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: axion-telemetry-query-service
+      version: ">=0.1.0"
+      sourceRef:
+        kind: HelmRepository
+        name: acr-helm-repo
+        namespace: flux-system
+  values:
+    environment: prod
+    replicaCount: 1
+    image:
+      repository: rakeshacr01.azurecr.io/prod-axion-telemetry-query-service
+      tag: "prod-latest"
+    ingress:
+      enabled: false
+      className: kong
+      hosts:
+        - host: query.axion.local
+          paths:
+            - path: /
+              pathType: Prefix
+    env:
+      DATABASE_URL: "postgresql://axion_user:Axiondb%401234@axion-db-service.prod.svc.cluster.local:5432/axion_db"

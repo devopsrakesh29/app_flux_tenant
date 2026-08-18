@@ -1,0 +1,32 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta2
+kind: HelmRelease
+metadata:
+  name: axion-data-simulator
+  namespace: prod
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: axion-data-simulator
+      version: ">=0.1.0"
+      sourceRef:
+        kind: HelmRepository
+        name: acr-helm-repo
+        namespace: flux-system
+  values:
+    environment: prod
+    replicaCount: 1
+    image:
+      repository: rakeshacr01.azurecr.io/prod-axion-data-simulator
+      tag: "prod-latest"
+    ingress:
+      enabled: false
+      className: kong
+      hosts:
+        - host: simulator.axion.local
+          paths:
+            - path: /
+              pathType: Prefix
+    env:
+      API_URL: "http://axion-ingestion-service.prod.svc.cluster.local:8000/api/v1/telemetry/ingest"
+      INTERVAL_SECONDS: "5"
