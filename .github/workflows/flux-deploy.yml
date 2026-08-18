@@ -5,14 +5,15 @@ on:
     branches: [ main, master, dev, int ]
   workflow_dispatch:
     inputs:
-      cluster_name:
-        description: 'AKS Cluster Name'
+      environment:
+        description: 'Target Environment to Deploy (dev, int, prod)'
         required: true
-        default: 'rakesh-aks-cluster'
-      resource_group:
-        description: 'Azure Resource Group'
-        required: true
-        default: 'rakesh-rg'
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - int
+          - prod
 
 env:
   AZURE_CLIENT_ID: "a74bb5f1-70ab-4e43-804f-911563937a5b"
@@ -20,7 +21,6 @@ env:
   AZURE_SUBSCRIPTION_ID: "a60bfb4b-160f-44e7-979b-775bdd787c90"
   AKS_CLUSTER_NAME: "rakesh-aks-cluster"
   AKS_RESOURCE_GROUP: "rakesh-rg"
-  ACR_NAME: "rakeshacr01"
 
 permissions:
   id-token: write
@@ -33,6 +33,23 @@ jobs:
     steps:
       - name: Checkout GitOps Repository
         uses: actions/checkout@v4
+
+      - name: Resolve Target Environment
+        id: prep
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            ENV="${{ inputs.environment }}"
+          elif [ "${{ github.ref_name }}" == "main" ] || [ "${{ github.ref_name }}" == "master" ]; then
+            ENV="prod"
+          elif [ "${{ github.ref_name }}" == "int" ]; then
+            ENV="int"
+          else
+            ENV="dev"
+          fi
+          
+          echo "TARGET_ENV=$ENV" >> $GITHUB_ENV
+          echo "Target deployment environment resolved to: $ENV"
 
       - name: Azure Login (OIDC)
         uses: azure/login@v2
@@ -50,18 +67,18 @@ jobs:
       - name: Setup Flux CLI
         uses: fluxcd/flux2/action@main
 
-      - name: Deploy Flux Namespaces & Sources to AKS
+      - name: Deploy Flux Namespaces & Core Sources to AKS
         run: |
           kubectl apply -f 00-flux-system-namespace.yaml
           kubectl apply -f sources/
 
-      - name: Deploy Environment App HelmReleases to AKS
+      - name: Deploy Environment Specific Flux Apps to AKS
         run: |
-          kubectl apply -f apps/dev/
-          kubectl apply -f apps/int/
-          kubectl apply -f apps/prod/
+          echo "Deploying manifests for environment: ${{ env.TARGET_ENV }}..."
+          kubectl apply -f apps/${{ env.TARGET_ENV }}/
 
-      - name: Verify FluxCD Deployment & Reconciliation Status
+      - name: Verify FluxCD Deployment Status for Environment
         run: |
           kubectl get namespaces
-          kubectl get helmreleases -A
+          kubectl get kustomizations -n flux-system
+          kubectl get helmreleases -n ${{ env.TARGET_ENV }}
