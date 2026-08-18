@@ -18,7 +18,7 @@ spec:
     replicaCount: 1
     image:
       repository: rakeshacr01.azurecr.io/int-axion-data-simulator
-      tag: "int-latest"
+      tag: "latest"
     ingress:
       enabled: false
       className: kong

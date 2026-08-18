@@ -18,7 +18,7 @@ spec:
     replicaCount: 1
     image:
       repository: rakeshacr01.azurecr.io/prod-axion-ui
-      tag: "prod-latest"
+      tag: "latest"
     ingress:
       enabled: true
       className: kong

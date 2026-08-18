@@ -18,7 +18,7 @@ spec:
     replicaCount: 1
     image:
       repository: rakeshacr01.azurecr.io/dev-axion-telemetry-query-service
-      tag: "dev-latest"
+      tag: "latest"
     ingress:
       enabled: false
       className: kong
