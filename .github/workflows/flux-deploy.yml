@@ -68,7 +68,12 @@ jobs:
         run: |
           az extension add --name k8s-configuration --upgrade || true
 
-      - name: Provision Flux Extension & Create GitOps Configuration on AKS
+      - name: Pre-Apply Flux Namespaces & Core Sources to Cluster
+        run: |
+          kubectl apply -f 00-flux-system-namespace.yaml
+          kubectl apply -f sources/
+
+      - name: Provision Flux Extension & Configure Dependency-Aware GitOps Kustomizations
         run: |
           az k8s-configuration flux create \
             --resource-group ${{ env.AKS_RESOURCE_GROUP }} \
@@ -79,11 +84,14 @@ jobs:
             --scope cluster \
             --url https://github.com/devopsrakesh29/app_flux_tenant.git \
             --branch main \
-            --kustomization name=dev-apps path=./apps/dev prune=true sync_interval=5m \
-            --kustomization name=int-apps path=./apps/int prune=true sync_interval=5m \
-            --kustomization name=prod-apps path=./apps/prod prune=true sync_interval=5m
+            --kustomization name=sources path=./sources prune=true sync_interval=1m \
+            --kustomization name=dev-apps path=./apps/dev prune=true sync_interval=5m depends_on=[sources] \
+            --kustomization name=int-apps path=./apps/int prune=true sync_interval=5m depends_on=[sources] \
+            --kustomization name=prod-apps path=./apps/prod prune=true sync_interval=5m depends_on=[sources]
 
       - name: Verify FluxCD Extension & Cluster Status
         run: |
           kubectl get namespaces
           kubectl get pods -n flux-system
+          kubectl get kustomizations -n flux-system
+          kubectl get helmrepositories -n flux-system
