@@ -67,22 +67,50 @@ jobs:
       - name: Install Azure CLI k8s-configuration extension
         run: |
           az extension add --name k8s-configuration --upgrade || true
+          az extension add --name k8s-extension --upgrade || true
 
-      - name: Provision Flux Extension & Configure GitOps Kustomizations on AKS
+      - name: Wait for Microsoft.Flux Extension Readiness
+        shell: bash
         run: |
-          az k8s-configuration flux create \
-            --resource-group ${{ env.AKS_RESOURCE_GROUP }} \
-            --cluster-name ${{ env.AKS_CLUSTER_NAME }} \
-            --cluster-type managedClusters \
-            --name app-flux-tenant \
-            --namespace flux-system \
-            --scope cluster \
-            --url https://github.com/devopsrakesh29/app_flux_tenant.git \
-            --branch main \
-            --kustomization name=sources path=./sources prune=true sync_interval=1m \
-            --kustomization name=dev-apps path=./apps/dev prune=true sync_interval=5m depends_on=[sources] \
-            --kustomization name=int-apps path=./apps/int prune=true sync_interval=5m depends_on=[sources] \
-            --kustomization name=prod-apps path=./apps/prod prune=true sync_interval=5m depends_on=[sources]
+          echo "Checking Microsoft.Flux extension state on AKS..."
+          for i in {1..30}; do
+            STATE=$(az k8s-extension show --resource-group ${{ env.AKS_RESOURCE_GROUP }} --cluster-name ${{ env.AKS_CLUSTER_NAME }} --cluster-type managedClusters --name flux --query provisioningState -o tsv 2>/dev/null || echo "NotPresent")
+            echo "Current extension state: $STATE"
+            if [ "$STATE" == "Succeeded" ] || [ "$STATE" == "NotPresent" ] || [ "$STATE" == "" ]; then
+              echo "Microsoft.Flux extension is ready for configuration."
+              break
+            fi
+            echo "Extension is currently in state '$STATE'. Waiting 15 seconds for completion... (Attempt $i/30)"
+            sleep 15
+          done
+
+      - name: Provision Flux Extension & Configure GitOps Kustomizations on AKS (with Retry)
+        shell: bash
+        run: |
+          for attempt in {1..5}; do
+            echo "Attempt $attempt: Running az k8s-configuration flux create..."
+            if az k8s-configuration flux create \
+              --resource-group ${{ env.AKS_RESOURCE_GROUP }} \
+              --cluster-name ${{ env.AKS_CLUSTER_NAME }} \
+              --cluster-type managedClusters \
+              --name app-flux-tenant \
+              --namespace flux-system \
+              --scope cluster \
+              --url https://github.com/devopsrakesh29/app_flux_tenant.git \
+              --branch main \
+              --kustomization name=sources path=./sources prune=true sync_interval=1m \
+              --kustomization name=dev-apps path=./apps/dev prune=true sync_interval=5m depends_on=[sources] \
+              --kustomization name=int-apps path=./apps/int prune=true sync_interval=5m depends_on=[sources] \
+              --kustomization name=prod-apps path=./apps/prod prune=true sync_interval=5m depends_on=[sources]; then
+              echo "Flux v2 GitOps configuration created successfully!"
+              exit 0
+            else
+              echo "::warning::Flux configuration creation returned an error. Waiting 20 seconds before retry..."
+              sleep 20
+            fi
+          done
+          echo "Failed to create Flux configuration after 5 attempts."
+          exit 1
 
       - name: Verify FluxCD Extension & Cluster Status
         run: |
