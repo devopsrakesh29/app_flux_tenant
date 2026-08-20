@@ -9,5 +9,5 @@ spec:
   prune: true
   sourceRef:
     kind: GitRepository
-    name: app_flux_tenant
+    name: app-flux-tenant
   targetNamespace: dev
