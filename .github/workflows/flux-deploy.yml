@@ -34,7 +34,7 @@ jobs:
       - name: Checkout GitOps Repository
         uses: actions/checkout@v4
 
-      - name: Resolve Target Environment
+      - name: Resolve Target Environment & Dynamic Kustomization
         id: prep
         shell: bash
         run: |
@@ -49,7 +49,11 @@ jobs:
           fi
           
           echo "TARGET_ENV=$ENV" >> $GITHUB_ENV
-          echo "Target deployment environment resolved to: $ENV"
+          echo "KUSTOMIZATION_NAME=${ENV}-apps" >> $GITHUB_ENV
+          echo "KUSTOMIZATION_PATH=./apps/${ENV}" >> $GITHUB_ENV
+          echo "Resolved Target Environment: $ENV"
+          echo "Resolved Kustomization Name: ${ENV}-apps"
+          echo "Resolved Kustomization Path: ./apps/${ENV}"
 
       - name: Azure Login (OIDC)
         uses: azure/login@v2
@@ -84,11 +88,11 @@ jobs:
             sleep 15
           done
 
-      - name: Provision Flux Extension & Configure GitOps Kustomizations on AKS (with Retry)
+      - name: Provision Flux Extension & Configure Target Environment Kustomization on AKS (with Retry)
         shell: bash
         run: |
           for attempt in {1..5}; do
-            echo "Attempt $attempt: Running az k8s-configuration flux create..."
+            echo "Attempt $attempt: Creating Flux configuration for environment: ${{ env.TARGET_ENV }}..."
             if az k8s-configuration flux create \
               --resource-group ${{ env.AKS_RESOURCE_GROUP }} \
               --cluster-name ${{ env.AKS_CLUSTER_NAME }} \
@@ -97,12 +101,10 @@ jobs:
               --namespace flux-system \
               --scope cluster \
               --url https://github.com/devopsrakesh29/app_flux_tenant.git \
-              --branch main \
+              --branch ${{ github.ref_name }} \
               --kustomization name=sources path=./sources prune=true sync_interval=1m \
-              --kustomization name=dev-apps path=./apps/dev prune=true sync_interval=5m depends_on=[sources] \
-              --kustomization name=int-apps path=./apps/int prune=true sync_interval=5m depends_on=[sources] \
-              --kustomization name=prod-apps path=./apps/prod prune=true sync_interval=5m depends_on=[sources]; then
-              echo "Flux v2 GitOps configuration created successfully!"
+              --kustomization name=${{ env.KUSTOMIZATION_NAME }} path=${{ env.KUSTOMIZATION_PATH }} prune=true sync_interval=5m depends_on=[sources]; then
+              echo "Flux v2 GitOps configuration for ${{ env.TARGET_ENV }} created successfully!"
               exit 0
             else
               echo "::warning::Flux configuration creation returned an error. Waiting 20 seconds before retry..."
@@ -116,3 +118,5 @@ jobs:
         run: |
           kubectl get namespaces
           kubectl get pods -n flux-system
+          kubectl get kustomizations -n flux-system
+          kubectl get helmreleases -n ${{ env.TARGET_ENV }}
