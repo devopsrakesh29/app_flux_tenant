@@ -68,12 +68,7 @@ jobs:
         run: |
           az extension add --name k8s-configuration --upgrade || true
 
-      - name: Pre-Apply Flux Namespaces & Core Sources to Cluster
-        run: |
-          kubectl apply -f 00-flux-system-namespace.yaml
-          kubectl apply -f sources/
-
-      - name: Provision Flux Extension & Configure Dependency-Aware GitOps Kustomizations
+      - name: Provision Flux Extension & Configure GitOps Kustomizations on AKS
         run: |
           az k8s-configuration flux create \
             --resource-group ${{ env.AKS_RESOURCE_GROUP }} \
@@ -93,5 +88,3 @@ jobs:
         run: |
           kubectl get namespaces
           kubectl get pods -n flux-system
-          kubectl get kustomizations -n flux-system
-          kubectl get helmrepositories -n flux-system
