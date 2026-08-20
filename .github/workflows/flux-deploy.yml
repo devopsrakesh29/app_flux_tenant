@@ -28,7 +28,7 @@ permissions:
 
 jobs:
   deploy-flux:
-    name: Sync FluxCD Manifests to AKS
+    name: Provision Flux v2 Extension & Sync Manifests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout GitOps Repository
@@ -64,21 +64,26 @@ jobs:
           cluster-name: ${{ env.AKS_CLUSTER_NAME }}
           resource-group: ${{ env.AKS_RESOURCE_GROUP }}
 
-      - name: Setup Flux CLI
-        uses: fluxcd/flux2/action@main
-
-      - name: Deploy Flux Namespaces & Core Sources to AKS
+      - name: Install Azure CLI k8s-configuration extension
         run: |
-          kubectl apply -f 00-flux-system-namespace.yaml
-          kubectl apply -f sources/
+          az extension add --name k8s-configuration --upgrade || true
 
-      - name: Deploy Environment Specific Flux Apps to AKS
+      - name: Provision Flux Extension & Create GitOps Configuration on AKS
         run: |
-          echo "Deploying manifests for environment: ${{ env.TARGET_ENV }}..."
-          kubectl apply -f apps/${{ env.TARGET_ENV }}/
+          az k8s-configuration flux create \
+            --resource-group ${{ env.AKS_RESOURCE_GROUP }} \
+            --cluster-name ${{ env.AKS_CLUSTER_NAME }} \
+            --cluster-type managedClusters \
+            --name app-flux-tenant \
+            --namespace flux-system \
+            --scope cluster \
+            --url https://github.com/devopsrakesh29/app_flux_tenant.git \
+            --branch main \
+            --kustomization name=dev-apps path=./apps/dev prune=true sync_interval=5m \
+            --kustomization name=int-apps path=./apps/int prune=true sync_interval=5m \
+            --kustomization name=prod-apps path=./apps/prod prune=true sync_interval=5m
 
-      - name: Verify FluxCD Deployment Status for Environment
+      - name: Verify FluxCD Extension & Cluster Status
         run: |
           kubectl get namespaces
-          kubectl get kustomizations -n flux-system
-          kubectl get helmreleases -n ${{ env.TARGET_ENV }}
+          kubectl get pods -n flux-system
