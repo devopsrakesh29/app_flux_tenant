@@ -8,5 +8,3 @@ spec:
   interval: 1m0s
   url: oci://rakeshacr01.azurecr.io/helm
   provider: azure
-  secretRef:
-    name: acr-credentials
